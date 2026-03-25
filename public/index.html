@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>채팅</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <!-- 입장 전 화면 -->
+    <div id="join-area">
+      <div class="join-box">
+        <h2>💬 채팅방 입장</h2>
+        <input id="name-input" placeholder="이름을 입력하세요" />
+        <button onclick="joinChat()">입장하기</button>
+      </div>
+    </div>
+
+    <!-- 입장 후 화면 -->
+    <div id="chat-area" style="display: none">
+      <div class="chat-wrapper">
+        <!-- 메인 채팅 영역 -->
+        <div class="chat-main">
+          <div class="chat-header">
+            <h2>💬 채팅방</h2>
+          </div>
+          <div id="messages"></div>
+          <div id="input-area">
+            <input id="msg-input" placeholder="메시지를 입력하세요" />
+            <button onclick="sendMessage()">전송</button>
+          </div>
+        </div>
+
+        <!-- 사이드바 -->
+        <div class="sidebar">
+          <div class="sidebar-header">
+            접속자 <span id="user-count">0</span>명
+          </div>
+          <ul id="user-list"></ul>
+        </div>
+      </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      const socket = io();
+      let myName = '';
+
+      function joinChat() {
+        const name = document.getElementById('name-input').value.trim();
+        if (!name) return alert('이름을 입력해주세요!');
+
+        myName = name;
+
+        document.getElementById('join-area').style.display = 'none';
+        document.getElementById('chat-area').style.display = 'flex';
+        document.getElementById('msg-input').focus();
+
+        // UI 전환 후에 이벤트 전송
+        socket.emit('user_join', name);
+      }
+
+      // 유저 목록 업데이트
+      socket.on('update_users', (users) => {
+        const list = document.getElementById('user-list');
+        const count = document.getElementById('user-count');
+
+        count.textContent = users.length;
+        list.innerHTML = users
+          .map(
+            (name) => `
+        <li class="${name === myName ? 'me' : ''}">
+          <span class="status-dot"></span>
+          ${name} ${name === myName ? '(나)' : ''}
+        </li>
+      `,
+          )
+          .join('');
+      });
+
+      // 입장/퇴장 알림
+      socket.on('notice', (message) => {
+        const box = document.getElementById('messages');
+        box.innerHTML += `<div class="notice">${message}</div>`;
+        box.scrollTop = box.scrollHeight;
+      });
+
+      // 입장 시 이전 메시지 불러오기
+      socket.on('load_messages', (messages) => {
+        const box = document.getElementById('messages');
+        messages.forEach((data) => {
+          const isMine = data.sender === myName;
+          box.innerHTML += `
+      <div class="msg ${isMine ? 'mine' : 'other'}">
+        ${!isMine ? `<span class="name">${data.sender}</span>` : ''}
+        <div class="bubble">${data.message}</div>
+        <span class="time">${new Date(data.time).toLocaleTimeString('ko-KR')}</span>
+      </div>
+    `;
+        });
+        box.scrollTop = box.scrollHeight;
+      });
+      // 메시지 수신
+      socket.on('receive_message', (data) => {
+        const box = document.getElementById('messages');
+        const isMine = data.sender === myName;
+
+        box.innerHTML += `
+        <div class="msg ${isMine ? 'mine' : 'other'}">
+          ${!isMine ? `<span class="name">${data.sender}</span>` : ''}
+          <div class="bubble">${data.message}</div>
+          <span class="time">${data.time}</span>
+        </div>
+      `;
+        box.scrollTop = box.scrollHeight;
+      });
+
+      function sendMessage() {
+        const message = document.getElementById('msg-input').value;
+        if (!message.trim()) return;
+
+        socket.emit('send_message', { sender: myName, message });
+        document.getElementById('msg-input').value = '';
+      }
+
+      document.getElementById('msg-input').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') sendMessage();
+      });
+
+      document.getElementById('name-input').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') joinChat();
+      });
+    </script>
+  </body>
+</html>

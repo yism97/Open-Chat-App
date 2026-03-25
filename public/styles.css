@@ -1,0 +1,266 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: sans-serif;
+  background: #f0f2f5;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── 입장 화면 ── */
+#join-area {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100vh;
+}
+
+.join-box {
+  background: white;
+  padding: 40px;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 320px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+}
+
+.join-box h2 {
+  text-align: center;
+  margin-bottom: 8px;
+  color: #333;
+}
+
+.join-box input {
+  padding: 10px 14px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 15px;
+  outline: none;
+}
+
+.join-box input:focus {
+  border-color: #5865f2;
+}
+
+.join-box button {
+  padding: 11px;
+  background: #5865f2;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.join-box button:hover {
+  background: #4752c4;
+}
+
+/* ── 채팅 레이아웃 ── */
+#chat-area {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.chat-wrapper {
+  display: flex;
+  width: 100%;
+  max-width: 860px;
+  height: 600px;
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+}
+
+/* ── 메인 채팅 ── */
+.chat-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #eee;
+}
+
+.chat-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #eee;
+  background: white;
+  height: 56px;
+  display: flex;
+  align-items: center;
+}
+
+.chat-header h2 {
+  font-size: 16px;
+  color: #333;
+}
+
+#messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: #f8f9fa;
+}
+
+/* ── 말풍선 ── */
+.msg {
+  display: flex;
+  flex-direction: column;
+  max-width: 65%;
+  gap: 3px;
+}
+
+.msg.other {
+  align-self: flex-start;
+}
+
+.msg.mine {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.msg .name {
+  font-size: 12px;
+  color: #111111;
+  margin-left: 4px;
+  font-weight: 600;
+}
+
+.bubble {
+  padding: 10px 14px;
+  border-radius: 16px;
+  font-size: 14px;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.msg.other .bubble {
+  background: white;
+  border: 1px solid #eee;
+  border-top-left-radius: 4px;
+  color: #333;
+}
+
+.msg.mine .bubble {
+  background: #5865f2;
+  color: white;
+  border-top-right-radius: 4px;
+}
+
+.msg .time {
+  font-size: 11px;
+  color: #bbb;
+  margin: 0 4px;
+}
+
+/* ── 입력창 ── */
+#input-area {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid #eee;
+  background: white;
+}
+
+#input-area input {
+  flex: 1;
+  padding: 10px 14px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+}
+
+#input-area input:focus {
+  border-color: #5865f2;
+}
+
+#input-area button {
+  padding: 10px 18px;
+  background: #5865f2;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s;
+}
+
+#input-area button:hover {
+  background: #4752c4;
+}
+
+/* ── 사이드바 ── */
+.sidebar {
+  width: 200px;
+  display: flex;
+  flex-direction: column;
+  background: white;
+}
+
+.sidebar-header {
+  padding: 16px;
+  font-size: 13px;
+  font-weight: bold;
+  color: #555;
+  border-bottom: 1px solid #eee;
+  height: 56px;
+  display: flex;
+  align-items: center;
+}
+
+#user-list {
+  list-style: none;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+#user-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #444;
+}
+
+#user-list li.me {
+  background: #f0f1ff;
+  color: #5865f2;
+  font-weight: bold;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  background: #43b581;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── 알림 메시지 ── */
+.notice {
+  text-align: center;
+  font-size: 12px;
+  color: #aaa;
+  margin: 6px 0;
+}
