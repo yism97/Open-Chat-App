@@ -18,10 +18,20 @@
     <!-- 입장 후 화면 -->
     <div id="chat-area" style="display: none">
       <div class="chat-wrapper">
+        <!-- 방 목록 사이드바 -->
+        <div class="room-sidebar">
+          <div class="room-sidebar-header">채팅방</div>
+          <ul id="room-list"></ul>
+          <div class="room-create">
+            <input id="room-input" placeholder="방 이름" />
+            <button onclick="createRoom()">만들기</button>
+          </div>
+        </div>
+
         <!-- 메인 채팅 영역 -->
         <div class="chat-main">
           <div class="chat-header">
-            <h2>💬 채팅방</h2>
+            <h2 id="current-room">방을 선택하세요</h2>
           </div>
           <div id="messages"></div>
           <div id="input-area">
@@ -30,7 +40,7 @@
           </div>
         </div>
 
-        <!-- 사이드바 -->
+        <!-- 접속자 사이드바 -->
         <div class="sidebar">
           <div class="sidebar-header">
             접속자 <span id="user-count">0</span>명
@@ -44,6 +54,7 @@
     <script>
       const socket = io();
       let myName = '';
+      let currentRoom = null;
 
       function joinChat() {
         const name = document.getElementById('name-input').value.trim();
@@ -53,13 +64,52 @@
 
         document.getElementById('join-area').style.display = 'none';
         document.getElementById('chat-area').style.display = 'flex';
-        document.getElementById('msg-input').focus();
 
-        // UI 전환 후에 이벤트 전송
         socket.emit('user_join', name);
       }
 
-      // 유저 목록 업데이트
+      // 방 목록 업데이트
+      socket.on('update_rooms', (rooms) => {
+        const list = document.getElementById('room-list');
+        list.innerHTML = rooms
+          .map(
+            (room) => `
+        <li class="${room.name === currentRoom ? 'active' : ''}"
+            onclick="joinRoom('${room.name}')">
+          # ${room.name}
+        </li>
+      `,
+          )
+          .join('');
+      });
+
+      function joinRoom(roomName) {
+        if (roomName === currentRoom) return;
+        currentRoom = roomName;
+
+        document.getElementById('current-room').textContent = `# ${roomName}`;
+        document.getElementById('messages').innerHTML = '';
+        document.getElementById('msg-input').focus();
+
+        socket.emit('join_room', roomName);
+
+        // 방 목록에서 active 표시 업데이트
+        document.querySelectorAll('#room-list li').forEach((li) => {
+          li.classList.toggle(
+            'active',
+            li.textContent.trim() === `# ${roomName}`,
+          );
+        });
+      }
+
+      function createRoom() {
+        const name = document.getElementById('room-input').value.trim();
+        if (!name) return;
+        socket.emit('create_room', name);
+        document.getElementById('room-input').value = '';
+      }
+
+      // 접속자 목록 업데이트
       socket.on('update_users', (users) => {
         const list = document.getElementById('user-list');
         const count = document.getElementById('user-count');
@@ -77,33 +127,43 @@
           .join('');
       });
 
-      // 입장/퇴장 알림
+      // 이전 메시지 불러오기
+      socket.on('load_messages', (messages) => {
+        const box = document.getElementById('messages');
+        box.innerHTML = '';
+        messages.forEach((data) => {
+          const isMine = data.sender === myName;
+          box.innerHTML += `
+          <div class="msg ${isMine ? 'mine' : 'other'}">
+            ${!isMine ? `<span class="name">${data.sender}</span>` : ''}
+            <div class="bubble">${data.message}</div>
+            <span class="time">${new Date(data.time).toLocaleTimeString('ko-KR')}</span>
+          </div>
+        `;
+        });
+        box.scrollTop = box.scrollHeight;
+      });
+
+      // 알림 메시지
       socket.on('notice', (message) => {
+        // 중복 닉네임 에러 처리
+        if (message === '이미 사용 중인 닉네임이에요!') {
+          alert(message);
+          // UI 되돌리기 (입장 화면으로)
+          document.getElementById('join-area').style.display = 'flex';
+          document.getElementById('chat-area').style.display = 'none';
+          return;
+        }
+
         const box = document.getElementById('messages');
         box.innerHTML += `<div class="notice">${message}</div>`;
         box.scrollTop = box.scrollHeight;
       });
 
-      // 입장 시 이전 메시지 불러오기
-      socket.on('load_messages', (messages) => {
-        const box = document.getElementById('messages');
-        messages.forEach((data) => {
-          const isMine = data.sender === myName;
-          box.innerHTML += `
-      <div class="msg ${isMine ? 'mine' : 'other'}">
-        ${!isMine ? `<span class="name">${data.sender}</span>` : ''}
-        <div class="bubble">${data.message}</div>
-        <span class="time">${new Date(data.time).toLocaleTimeString('ko-KR')}</span>
-      </div>
-    `;
-        });
-        box.scrollTop = box.scrollHeight;
-      });
       // 메시지 수신
       socket.on('receive_message', (data) => {
         const box = document.getElementById('messages');
         const isMine = data.sender === myName;
-
         box.innerHTML += `
         <div class="msg ${isMine ? 'mine' : 'other'}">
           ${!isMine ? `<span class="name">${data.sender}</span>` : ''}
@@ -115,6 +175,7 @@
       });
 
       function sendMessage() {
+        if (!currentRoom) return alert('채팅방을 먼저 선택해주세요!');
         const message = document.getElementById('msg-input').value;
         if (!message.trim()) return;
 
@@ -122,13 +183,21 @@
         document.getElementById('msg-input').value = '';
       }
 
-      document.getElementById('msg-input').addEventListener('keydown', (e) => {
+      document.getElementById('msg-input')?.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') sendMessage();
       });
 
-      document.getElementById('name-input').addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') joinChat();
-      });
+      document
+        .getElementById('name-input')
+        ?.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') joinChat();
+        });
+
+      document
+        .getElementById('room-input')
+        ?.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') createRoom();
+        });
     </script>
   </body>
 </html>
