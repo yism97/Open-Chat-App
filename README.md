@@ -146,12 +146,13 @@ open-chat-app/
 - Express 서버 구축
 - Socket.io 실시간 채팅 구현
 - MongoDB 메시지 저장 및 조회
+- 채팅방 기능 (Socket.io Rooms)
 
 ### 🚧 진행 예정
 
-- 채팅방 기능 (Socket.io Rooms)
 - 파일 / 이미지 전송 (Multer)
 - 서비스 배포 (Railway / Render)
+- 로그인 기능 구헌 (jwt / bcrypt)
 
 ---
 
