@@ -209,7 +209,7 @@ body {
 /* ── 사이드바 ── */
 .sidebar {
   width: 200px;
-  display: flex;
+  display: none;
   flex-direction: column;
   background: white;
 }
@@ -351,4 +351,40 @@ body {
 
 .room-create button:hover {
   background: #4752c4;
+}
+
+#user-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #444;
+}
+
+/* ── 방 삭제 버튼 ── */
+#room-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.delete-btn {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  line-height: 1;
+  transition:
+    color 0.15s,
+    background 0.15s;
+}
+
+.delete-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.15);
 }

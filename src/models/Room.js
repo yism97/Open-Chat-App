@@ -4,9 +4,14 @@ const roomSchema = new mongoose.Schema({
   name: {
     type: String,
     required: true,
-    unique: true, // 방 이름 중복 방지
+    unique: true,
   },
-  createAt: {
+  owner: {
+    type: String,
+    required: true, // 방장 닉네임
+  },
+  createdAt: {
+    // createAt → createdAt 오타 수정
     type: Date,
     default: Date.now,
   },

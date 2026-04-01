@@ -55,11 +55,11 @@
       const socket = io();
       let myName = '';
       let currentRoom = null;
+      let currentRoomOwner = null; // 현재 방의 방장
 
       function joinChat() {
         const name = document.getElementById('name-input').value.trim();
         if (!name) return alert('이름을 입력해주세요!');
-
         myName = name;
 
         document.getElementById('join-area').style.display = 'none';
@@ -68,17 +68,29 @@
         socket.emit('user_join', name);
       }
 
+      // 입장 에러 (중복 닉네임 등)
+      socket.on('join_error', (message) => {
+        alert(message);
+        document.getElementById('join-area').style.display = 'flex';
+        document.getElementById('chat-area').style.display = 'none';
+      });
+
       // 방 목록 업데이트
       socket.on('update_rooms', (rooms) => {
         const list = document.getElementById('room-list');
         list.innerHTML = rooms
           .map(
             (room) => `
-        <li class="${room.name === currentRoom ? 'active' : ''}"
-            onclick="joinRoom('${room.name}')">
-          # ${room.name}
-        </li>
-      `,
+    <li class="${room.name === currentRoom ? 'active' : ''}"
+        onclick="joinRoom('${room.name}')">
+      <span># ${room.name}</span>
+      ${
+        room.owner === myName
+          ? `<button class="delete-btn" onclick="deleteRoom(event, '${room.name}')">✕</button>`
+          : ''
+      }
+    </li>
+  `,
           )
           .join('');
       });
@@ -87,17 +99,19 @@
         if (roomName === currentRoom) return;
         currentRoom = roomName;
 
+        // 방 입장 시 사이드바 표시
+        document.querySelector('.sidebar').style.display = 'flex';
+
         document.getElementById('current-room').textContent = `# ${roomName}`;
         document.getElementById('messages').innerHTML = '';
         document.getElementById('msg-input').focus();
 
         socket.emit('join_room', roomName);
 
-        // 방 목록에서 active 표시 업데이트
         document.querySelectorAll('#room-list li').forEach((li) => {
           li.classList.toggle(
             'active',
-            li.textContent.trim() === `# ${roomName}`,
+            li.textContent.trim().startsWith(`# ${roomName}`),
           );
         });
       }
@@ -109,7 +123,32 @@
         document.getElementById('room-input').value = '';
       }
 
-      // 접속자 목록 업데이트
+      function deleteRoom(event, roomName) {
+        event.stopPropagation(); // li 클릭 이벤트 막기
+        if (!confirm(`'${roomName}' 방을 삭제할까요?`)) return;
+        socket.emit('delete_room', roomName);
+      }
+
+      // 방 삭제됐을 때 (강제 퇴장)
+      socket.on('room_deleted', (roomName) => {
+        if (currentRoom === roomName) {
+          currentRoom = null;
+          currentRoomOwner = null;
+          document.getElementById('current-room').textContent =
+            '방을 선택하세요';
+          document.getElementById('messages').innerHTML = '';
+          document.getElementById('messages').innerHTML +=
+            `<div class="notice">'${roomName}' 방이 삭제되었습니다.</div>`;
+          // 사이드바 다시 숨기기
+          document.querySelector('.sidebar').style.display = 'none';
+        }
+      });
+
+      // 방 정보 (방장 확인용)
+      socket.on('room_info', (info) => {
+        currentRoomOwner = info.owner;
+      });
+
       socket.on('update_users', (users) => {
         const list = document.getElementById('user-list');
         const count = document.getElementById('user-count');
@@ -118,14 +157,23 @@
         list.innerHTML = users
           .map(
             (name) => `
-        <li class="${name === myName ? 'me' : ''}">
-          <span class="status-dot"></span>
-          ${name} ${name === myName ? '(나)' : ''}
-        </li>
-      `,
+    <li class="${name === myName ? 'me' : ''}">
+      <span class="status-dot"></span>
+      ${name} ${name === myName ? '(나)' : ''}
+    </li>
+  `,
           )
           .join('');
       });
+
+      // 마지막 접속 시간 포맷
+      function getLastSeen(date) {
+        const diff = Math.floor((Date.now() - new Date(date)) / 60000);
+        if (diff < 1) return '방금 전';
+        if (diff < 60) return `${diff}분 전`;
+        if (diff < 1440) return `${Math.floor(diff / 60)}시간 전`;
+        return `${Math.floor(diff / 1440)}일 전`;
+      }
 
       // 이전 메시지 불러오기
       socket.on('load_messages', (messages) => {
@@ -134,43 +182,32 @@
         messages.forEach((data) => {
           const isMine = data.sender === myName;
           box.innerHTML += `
-          <div class="msg ${isMine ? 'mine' : 'other'}">
-            ${!isMine ? `<span class="name">${data.sender}</span>` : ''}
-            <div class="bubble">${data.message}</div>
-            <span class="time">${new Date(data.time).toLocaleTimeString('ko-KR')}</span>
-          </div>
-        `;
+      <div class="msg ${isMine ? 'mine' : 'other'}">
+        ${!isMine ? `<span class="name">${data.sender}</span>` : ''}
+        <div class="bubble">${data.message}</div>
+        <span class="time">${new Date(data.time).toLocaleTimeString('ko-KR')}</span>
+      </div>
+    `;
         });
         box.scrollTop = box.scrollHeight;
       });
 
-      // 알림 메시지
       socket.on('notice', (message) => {
-        // 중복 닉네임 에러 처리
-        if (message === '이미 사용 중인 닉네임이에요!') {
-          alert(message);
-          // UI 되돌리기 (입장 화면으로)
-          document.getElementById('join-area').style.display = 'flex';
-          document.getElementById('chat-area').style.display = 'none';
-          return;
-        }
-
         const box = document.getElementById('messages');
         box.innerHTML += `<div class="notice">${message}</div>`;
         box.scrollTop = box.scrollHeight;
       });
 
-      // 메시지 수신
       socket.on('receive_message', (data) => {
         const box = document.getElementById('messages');
         const isMine = data.sender === myName;
         box.innerHTML += `
-        <div class="msg ${isMine ? 'mine' : 'other'}">
-          ${!isMine ? `<span class="name">${data.sender}</span>` : ''}
-          <div class="bubble">${data.message}</div>
-          <span class="time">${data.time}</span>
-        </div>
-      `;
+    <div class="msg ${isMine ? 'mine' : 'other'}">
+      ${!isMine ? `<span class="name">${data.sender}</span>` : ''}
+      <div class="bubble">${data.message}</div>
+      <span class="time">${data.time}</span>
+    </div>
+  `;
         box.scrollTop = box.scrollHeight;
       });
 
@@ -186,13 +223,11 @@
       document.getElementById('msg-input')?.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') sendMessage();
       });
-
       document
         .getElementById('name-input')
         ?.addEventListener('keydown', (e) => {
           if (e.key === 'Enter') joinChat();
         });
-
       document
         .getElementById('room-input')
         ?.addEventListener('keydown', (e) => {
