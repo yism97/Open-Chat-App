@@ -7,11 +7,24 @@ const messageSchema = new mongoose.Schema({
   },
   message: {
     type: String,
-    required: true,
+    default: '',
   },
   room: {
     type: String,
-    required: true, // 어느 방의 메시지인지 필수로 저장
+    required: true,
+  },
+  // 파일 관련 필드 추가
+  fileUrl: {
+    type: String,
+    default: null,
+  },
+  fileName: {
+    type: String,
+    default: null,
+  },
+  fileType: {
+    type: String,
+    default: null, // 'image' or 'file'
   },
   time: {
     type: Date,

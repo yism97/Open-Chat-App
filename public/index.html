@@ -35,6 +35,14 @@
           </div>
           <div id="messages"></div>
           <div id="input-area">
+            <label class="file-btn" for="file-input" title="파일 첨부">+</label>
+            <input
+              type="file"
+              id="file-input"
+              style="display: none"
+              accept="image/*,.pdf,.zip,.txt"
+              onchange="uploadFile(this)"
+            />
             <input id="msg-input" placeholder="메시지를 입력하세요" />
             <button onclick="sendMessage()">전송</button>
           </div>
@@ -94,6 +102,48 @@
           )
           .join('');
       });
+
+      // 파일 업로드
+      async function uploadFile(input) {
+        const file = input.files[0];
+        if (!file) return;
+
+        // 5MB 체크 (클라이언트에서도 한번 더)
+        if (file.size > 5 * 1024 * 1024) {
+          alert('파일 크기는 5MB 이하만 가능해요!');
+          input.value = '';
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+          const res = await fetch('/upload', {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (!res.ok) throw new Error('업로드 실패');
+
+          const data = await res.json();
+          const isImage = file.type.startsWith('image/');
+
+          // 파일 업로드 완료 후 메시지로 전송
+          socket.emit('send_message', {
+            sender: myName,
+            message: '',
+            fileUrl: data.url,
+            fileName: data.originalName,
+            fileType: isImage ? 'image' : 'file',
+          });
+
+          input.value = ''; // 파일 입력 초기화
+        } catch (err) {
+          alert('파일 업로드에 실패했어요!');
+          console.error(err);
+        }
+      }
 
       function joinRoom(roomName) {
         if (roomName === currentRoom) return;
@@ -175,19 +225,51 @@
         return `${Math.floor(diff / 1440)}일 전`;
       }
 
+      // 메시지 렌더링 공통 함수
+      function renderMessage(data, isMine) {
+        // 시간 포맷 통일
+        const time =
+          typeof data.time === 'string' && !data.time.includes('T')
+            ? data.time // 이미 "오후 4:44:02" 형식이면 그대로
+            : new Date(data.time).toLocaleTimeString('ko-KR'); // ISO 형식이면 변환
+
+        let content = '';
+
+        if (data.fileType === 'image') {
+          content = `
+      <div class="bubble" style="padding: 6px;">
+        <img src="${data.fileUrl}" alt="${data.fileName}"
+             onclick="window.open('${data.fileUrl}')"
+             style="max-width:200px; max-height:200px;
+                    border-radius:6px; cursor:pointer; display:block;" />
+      </div>`;
+        } else if (data.fileType === 'file') {
+          content = `
+      <div class="bubble" style="padding: 0;">
+        <a href="${data.fileUrl}" download="${data.fileName}" class="file-link">
+          📎 ${data.fileName}
+        </a>
+      </div>`;
+        } else {
+          content = `<div class="bubble">${data.message}</div>`;
+        }
+
+        return `
+    <div class="msg ${isMine ? 'mine' : 'other'}">
+      ${!isMine ? `<span class="name">${data.sender}</span>` : ''}
+      ${content}
+      <span class="time">${time}</span>
+    </div>
+  `;
+      }
+
       // 이전 메시지 불러오기
       socket.on('load_messages', (messages) => {
         const box = document.getElementById('messages');
         box.innerHTML = '';
         messages.forEach((data) => {
           const isMine = data.sender === myName;
-          box.innerHTML += `
-      <div class="msg ${isMine ? 'mine' : 'other'}">
-        ${!isMine ? `<span class="name">${data.sender}</span>` : ''}
-        <div class="bubble">${data.message}</div>
-        <span class="time">${new Date(data.time).toLocaleTimeString('ko-KR')}</span>
-      </div>
-    `;
+          box.innerHTML += renderMessage(data, data.sender === myName);
         });
         box.scrollTop = box.scrollHeight;
       });
@@ -201,13 +283,7 @@
       socket.on('receive_message', (data) => {
         const box = document.getElementById('messages');
         const isMine = data.sender === myName;
-        box.innerHTML += `
-    <div class="msg ${isMine ? 'mine' : 'other'}">
-      ${!isMine ? `<span class="name">${data.sender}</span>` : ''}
-      <div class="bubble">${data.message}</div>
-      <span class="time">${data.time}</span>
-    </div>
-  `;
+        box.innerHTML += renderMessage(data, data.sender === myName);
         box.scrollTop = box.scrollHeight;
       });
 

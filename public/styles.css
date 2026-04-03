@@ -388,3 +388,41 @@ body {
   color: #fff;
   background: rgba(255, 255, 255, 0.15);
 }
+
+/* ── 파일 첨부 버튼 ── */
+.file-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  background: #f0f1ff;
+  color: #5865f2;
+  border-radius: 8px;
+  font-size: 22px;
+  cursor: pointer;
+  transition: background 0.2s;
+  flex-shrink: 0;
+  line-height: 1;
+  padding-bottom: 2px;
+}
+
+.file-btn:hover {
+  background: #e0e2ff;
+}
+
+/* ── 파일 다운로드 링크 ── */
+.file-link {
+  display: inline-block;
+  padding: 8px 14px;
+  background: #f0f1ff;
+  color: #5865f2;
+  border-radius: 8px;
+  font-size: 13px;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+
+.file-link:hover {
+  background: #e0e2ff;
+}

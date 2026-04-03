@@ -5,6 +5,7 @@ const mongoose = require('mongoose');
 const Message = require('./src/models/Message.js');
 const Room = require('./src/models/Room.js');
 const User = require('./src/models/User.js');
+const uploadRouter = require('./src/routes/upload.js');
 require('dotenv').config();
 
 const app = express();
@@ -13,6 +14,7 @@ const io = new Server(httpServer);
 
 app.use(express.json());
 app.use(express.static('public'));
+app.use('/upload', uploadRouter);
 
 const users = {};
 
@@ -123,12 +125,19 @@ io.on('connection', (socket) => {
       if (!room) return;
       const saved = await Message.create({
         sender: data.sender,
-        message: data.message,
+        message: data.message || '',
         room,
+        fileUrl: data.fileUrl || null,
+        fileName: data.fileName || null,
+        fileType: data.fileType || null,
       });
+
       io.to(room).emit('receive_message', {
         sender: saved.sender,
         message: saved.message,
+        fileUrl: saved.fileUrl,
+        fileName: saved.fileName,
+        fileType: saved.fileType,
         time: saved.time.toLocaleTimeString('ko-KR'),
       });
     } catch (err) {
