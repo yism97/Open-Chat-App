@@ -13,7 +13,7 @@ const messageSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  // 파일 관련 필드 추가
+  // 파일 관련 필드
   fileUrl: {
     type: String,
     default: null,
@@ -26,10 +26,15 @@ const messageSchema = new mongoose.Schema({
     type: String,
     default: null, // 'image' or 'file'
   },
+  expiredAt: {
+    type: Date,
+    default: null,
+  },
   time: {
     type: Date,
     default: Date.now,
   },
 });
 
-module.exports = mongoose.model('Message', messageSchema);
+module.exports =
+  mongoose.models.Message || mongoose.model('Message', messageSchema);

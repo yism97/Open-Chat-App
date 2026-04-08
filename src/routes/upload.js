@@ -1,7 +1,9 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
+const Message = require('../models/message');
 
 const router = express.Router();
 
@@ -19,17 +21,18 @@ const storage = multer.diskStorage({
 
 // 파일 필터 — 허용 파일 타입
 const fileFilter = (req, file, cb) => {
-  const allowedTypes = [
-    'image/jpeg',
-    'image/png',
-    'image/gif',
-    'image/webp',
-    'application/pdf',
-    'application/zip',
-    'text/plain',
+  const allowedExtensions = [
+    '.jpg',
+    '.jpeg',
+    '.png',
+    '.gif',
+    '.webp',
+    '.pdf',
+    '.zip',
+    '.txt',
   ];
-
-  if (allowedTypes.includes(file.mimetype)) {
+  const ext = path.extname(file.originalname).toLowerCase();
+  if (allowedExtensions.includes(ext)) {
     cb(null, true);
   } else {
     cb(new Error('지원하지 않는 파일 형식이에요!'), false);
@@ -54,6 +57,36 @@ router.post('/', upload.single('file'), (req, res) => {
     mimetype: req.file.mimetype, // 파일 타입
     size: req.file.size, // 파일 크기
   });
+});
+
+// GET /upload/download/:filename — 만료 체크 후 다운로드
+router.get('/download/:filename', async (req, res) => {
+  try {
+    const { filename } = req.params;
+
+    // DB에서 해당 파일 메시지 찾기
+    const message = await Message.findOne({ fileUrl: `/uploads/${filename}` });
+
+    if (!message) {
+      return res.status(404).json({ error: '파일을 찾을 수 없어요.' });
+    }
+
+    // 만료 체크
+    if (message.expiredAt && new Date() > message.expiredAt) {
+      // 만료된 파일 서버에서도 삭제
+      const filePath = path.join(__dirname, '../../public/uploads', filename);
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+
+      return res.status(410).json({ error: '파일이 만료되었어요.' });
+    }
+
+    // 파일 전송
+    const filePath = path.join(__dirname, '../../public/uploads', filename);
+    res.download(filePath, message.fileName);
+  } catch (err) {
+    console.error('다운로드 실패:', err);
+    res.status(500).json({ error: '다운로드에 실패했어요.' });
+  }
 });
 
 module.exports = router;

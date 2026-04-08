@@ -6,6 +6,8 @@ const Message = require('./src/models/Message.js');
 const Room = require('./src/models/Room.js');
 const User = require('./src/models/User.js');
 const uploadRouter = require('./src/routes/upload.js');
+const path = require('path');
+const fs = require('fs');
 require('dotenv').config();
 
 const app = express();
@@ -26,6 +28,40 @@ mongoose
     if (!exists) await Room.create({ name: '일반', owner: 'system' });
   })
   .catch((err) => console.error('MongoDB 연결 실패:', err));
+
+// 1시간마다 만료 파일 정리
+setInterval(
+  async () => {
+    try {
+      const expiredMessages = await Message.find({
+        expiredAt: { $lt: new Date() }, // 만료시간이 현재보다 이전
+        fileUrl: { $ne: null },
+      });
+
+      for (const msg of expiredMessages) {
+        const filename = msg.fileUrl.split('/').pop();
+        const filePath = path.join(__dirname, 'public/uploads', filename);
+
+        // 파일 삭제
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+
+        // fileUrl 초기화 (메시지는 남겨둬요)
+        await Message.findByIdAndUpdate(msg._id, {
+          fileUrl: null,
+          fileName: null,
+          fileType: null,
+        });
+      }
+
+      if (expiredMessages.length > 0) {
+        console.log(`만료 파일 ${expiredMessages.length}개 삭제 완료`);
+      }
+    } catch (err) {
+      console.error('만료 파일 정리 실패:', err);
+    }
+  },
+  60 * 60 * 1000,
+); // 1시간마다 실행
 
 io.on('connection', (socket) => {
   console.log('유저 접속:', socket.id);
@@ -123,6 +159,11 @@ io.on('connection', (socket) => {
     try {
       const room = users[socket.id]?.room;
       if (!room) return;
+
+      const expiredAt = data.fileType
+        ? new Date(Date.now() + 24 * 60 * 60 * 1000)
+        : null;
+
       const saved = await Message.create({
         sender: data.sender,
         message: data.message || '',
@@ -130,6 +171,7 @@ io.on('connection', (socket) => {
         fileUrl: data.fileUrl || null,
         fileName: data.fileName || null,
         fileType: data.fileType || null,
+        expiredAt,
       });
 
       io.to(room).emit('receive_message', {
@@ -138,6 +180,7 @@ io.on('connection', (socket) => {
         fileUrl: saved.fileUrl,
         fileName: saved.fileName,
         fileType: saved.fileType,
+        expiredAt: saved.expiredAt,
         time: saved.time.toLocaleTimeString('ko-KR'),
       });
     } catch (err) {
