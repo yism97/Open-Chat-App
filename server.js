@@ -2,10 +2,12 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const mongoose = require('mongoose');
+const jwt = require('jsonwebtoken');
 const Message = require('./src/models/Message.js');
 const Room = require('./src/models/Room.js');
 const User = require('./src/models/User.js');
 const uploadRouter = require('./src/routes/upload.js');
+const authRouter = require('./src/routes/auth.js');
 const path = require('path');
 const fs = require('fs');
 require('dotenv').config();
@@ -17,6 +19,7 @@ const io = new Server(httpServer);
 app.use(express.json());
 app.use(express.static('public'));
 app.use('/upload', uploadRouter);
+app.use('/auth', authRouter);
 
 const users = {};
 
@@ -29,68 +32,53 @@ mongoose
   })
   .catch((err) => console.error('MongoDB 연결 실패:', err));
 
-// 1시간마다 만료 파일 정리
-setInterval(
-  async () => {
-    try {
-      const expiredMessages = await Message.find({
-        expiredAt: { $lt: new Date() }, // 만료시간이 현재보다 이전
-        fileUrl: { $ne: null },
-      });
+// Socket.io 연결 시 JWT 검증
+io.use((socket, next) => {
+  const token = socket.handshake.auth.token;
 
-      for (const msg of expiredMessages) {
-        const filename = msg.fileUrl.split('/').pop();
-        const filePath = path.join(__dirname, 'public/uploads', filename);
+  if (!token) {
+    return next(new Error('로그인이 필요해요.'));
+  }
 
-        // 파일 삭제
-        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-
-        // fileUrl 초기화 (메시지는 남겨둬요)
-        await Message.findByIdAndUpdate(msg._id, {
-          fileUrl: null,
-          fileName: null,
-          fileType: null,
-        });
-      }
-
-      if (expiredMessages.length > 0) {
-        console.log(`만료 파일 ${expiredMessages.length}개 삭제 완료`);
-      }
-    } catch (err) {
-      console.error('만료 파일 정리 실패:', err);
-    }
-  },
-  60 * 60 * 1000,
-); // 1시간마다 실행
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    socket.username = decoded.name; // 소켓에 유저 정보 저장
+    next();
+  } catch (err) {
+    return next(new Error('토큰이 유효하지 않아요.'));
+  }
+});
 
 io.on('connection', (socket) => {
-  console.log('유저 접속:', socket.id);
+  console.log('유저 접속:', socket.username);
 
-  socket.on('user_join', async (name) => {
+  // 중복 접속 체크
+  const isDuplicate = Object.values(users).some(
+    (u) => u.name === socket.username,
+  );
+  if (isDuplicate) {
+    socket.emit('join_error', '이미 접속 중인 계정이에요!');
+    socket.disconnect();
+    return;
+  }
+
+  users[socket.id] = { name: socket.username, room: null };
+
+  // user_join 이벤트 제거 — 이제 JWT에서 이름을 가져와요
+  const initChat = async () => {
     try {
-      // users 객체에서 현재 접속 중인 닉네임 체크
-      const isDuplicate = Object.values(users).some((u) => u.name === name);
-      if (isDuplicate) {
-        socket.emit('join_error', '이미 접속 중인 닉네임이에요!');
-        return;
-      }
-
-      await User.findOneAndUpdate(
-        { name },
-        { name },
-        { upsert: true, returnDocument: 'after' },
-      );
-
-      socket.username = name;
-      users[socket.id] = { name, room: null };
-
       const rooms = await Room.find().sort({ createdAt: 1 });
       socket.emit('update_rooms', rooms);
-      socket.emit('notice', `${name}님, 환영합니다! 채팅방을 선택하세요.`);
+      socket.emit(
+        'notice',
+        `${socket.username}님, 환영합니다! 채팅방을 선택하세요.`,
+      );
     } catch (err) {
-      console.error('유저 입장 실패:', err);
+      console.error('초기화 실패:', err);
     }
-  });
+  };
+
+  initChat();
 
   socket.on('create_room', async (roomName) => {
     try {
@@ -165,7 +153,7 @@ io.on('connection', (socket) => {
         : null;
 
       const saved = await Message.create({
-        sender: data.sender,
+        sender: socket.username,
         message: data.message || '',
         room,
         fileUrl: data.fileUrl || null,
@@ -202,6 +190,40 @@ io.on('connection', (socket) => {
     console.log('유저 퇴장:', socket.id);
   });
 });
+
+// 1시간마다 만료 파일 정리
+setInterval(
+  async () => {
+    try {
+      const expiredMessages = await Message.find({
+        expiredAt: { $lt: new Date() }, // 만료시간이 현재보다 이전
+        fileUrl: { $ne: null },
+      });
+
+      for (const msg of expiredMessages) {
+        const filename = msg.fileUrl.split('/').pop();
+        const filePath = path.join(__dirname, 'public/uploads', filename);
+
+        // 파일 삭제
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+
+        // fileUrl 초기화 (메시지는 남겨둬요)
+        await Message.findByIdAndUpdate(msg._id, {
+          fileUrl: null,
+          fileName: null,
+          fileType: null,
+        });
+      }
+
+      if (expiredMessages.length > 0) {
+        console.log(`만료 파일 ${expiredMessages.length}개 삭제 완료`);
+      }
+    } catch (err) {
+      console.error('만료 파일 정리 실패:', err);
+    }
+  },
+  60 * 60 * 1000,
+); // 1시간마다 실행
 
 // 특정 방에 있는 유저 목록 반환
 function getRoomUsers(roomName) {

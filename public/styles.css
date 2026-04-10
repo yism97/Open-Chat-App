@@ -451,3 +451,60 @@ body {
   margin-top: 4px;
   display: block;
 }
+
+/* ── 에러 메시지 ── */
+.auth-error {
+  font-size: 13px;
+  color: #e24b4a;
+  text-align: center;
+  min-height: 18px;
+  margin: 0;
+}
+
+/* ── 로그인/회원가입 링크 ── */
+.auth-links {
+  text-align: center;
+  font-size: 13px;
+  color: #888;
+  margin-top: 4px;
+}
+
+.auth-links a {
+  color: #5865f2;
+  text-decoration: none;
+  font-weight: 500;
+  margin-left: 4px;
+}
+
+.auth-links a:hover {
+  text-decoration: underline;
+}
+
+/* ── 로그아웃 버튼 ── */
+.logout-btn {
+  padding: 6px 12px;
+  background: none;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #888;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-left: auto;
+}
+
+.logout-btn:hover {
+  background: #fee;
+  border-color: #e24b4a;
+  color: #e24b4a;
+}
+
+/* ── chat-header flex 정렬 ── */
+.chat-header {
+  display: flex;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #eee;
+  background: white;
+  height: 56px;
+}

@@ -6,16 +6,22 @@
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
-    <!-- 입장 전 화면 -->
-    <div id="join-area">
-      <div class="join-box">
-        <h2>💬 채팅방 입장</h2>
-        <input id="name-input" placeholder="이름을 입력하세요" />
-        <button onclick="joinChat()">입장하기</button>
+    <!-- 로그인 화면 -->
+    <div id="auth-area">
+      <div id="login-box" class="join-box">
+        <h2>💬 채팅</h2>
+        <input id="auth-name" placeholder="닉네임" />
+        <input id="auth-password" type="password" placeholder="비밀번호" />
+        <button id="auth-btn" onclick="handleAuth()">로그인</button>
+        <p id="auth-error" class="auth-error"></p>
+        <div class="auth-links">
+          계정이 없으신가요?
+          <a href="/register.html">회원가입</a>
+        </div>
       </div>
     </div>
 
-    <!-- 입장 후 화면 -->
+    <!-- 채팅 화면 -->
     <div id="chat-area" style="display: none">
       <div class="chat-wrapper">
         <!-- 방 목록 사이드바 -->
@@ -28,14 +34,15 @@
           </div>
         </div>
 
-        <!-- 메인 채팅 영역 -->
+        <!-- 메인 채팅 -->
         <div class="chat-main">
           <div class="chat-header">
             <h2 id="current-room">방을 선택하세요</h2>
+            <button class="logout-btn" onclick="logout()">로그아웃</button>
           </div>
           <div id="messages"></div>
           <div id="input-area">
-            <label class="file-btn" for="file-input" title="파일 첨부">+</label>
+            <label class="file-btn" for="file-input">+</label>
             <input
               type="file"
               id="file-input"
@@ -49,7 +56,7 @@
         </div>
 
         <!-- 접속자 사이드바 -->
-        <div class="sidebar">
+        <div class="sidebar" style="display: none">
           <div class="sidebar-header">
             접속자 <span id="user-count">0</span>명
           </div>
@@ -60,104 +67,169 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
-      const socket = io();
+      let socket = null;
       let myName = '';
       let currentRoom = null;
-      let currentRoomOwner = null; // 현재 방의 방장
 
-      function joinChat() {
-        const name = document.getElementById('name-input').value.trim();
-        if (!name) return alert('이름을 입력해주세요!');
-        myName = name;
+      // 로그인 / 회원가입 처리
+      async function handleAuth() {
+        const name = document.getElementById('auth-name').value.trim();
+        const password = document.getElementById('auth-password').value;
+        const errorEl = document.getElementById('auth-error');
 
-        document.getElementById('join-area').style.display = 'none';
-        document.getElementById('chat-area').style.display = 'flex';
-
-        socket.emit('user_join', name);
-      }
-
-      // 입장 에러 (중복 닉네임 등)
-      socket.on('join_error', (message) => {
-        alert(message);
-        document.getElementById('join-area').style.display = 'flex';
-        document.getElementById('chat-area').style.display = 'none';
-      });
-
-      // 방 목록 업데이트
-      socket.on('update_rooms', (rooms) => {
-        const list = document.getElementById('room-list');
-        list.innerHTML = rooms
-          .map(
-            (room) => `
-    <li class="${room.name === currentRoom ? 'active' : ''}"
-        onclick="joinRoom('${room.name}')">
-      <span># ${room.name}</span>
-      ${
-        room.owner === myName
-          ? `<button class="delete-btn" onclick="deleteRoom(event, '${room.name}')">✕</button>`
-          : ''
-      }
-    </li>
-  `,
-          )
-          .join('');
-      });
-
-      // 파일 업로드
-      async function uploadFile(input) {
-        const file = input.files[0];
-        if (!file) return;
-
-        // 5MB 체크 (클라이언트에서도 한번 더)
-        if (file.size > 5 * 1024 * 1024) {
-          alert('파일 크기는 5MB 이하만 가능해요!');
-          input.value = '';
+        if (!name || !password) {
+          errorEl.textContent = '닉네임과 비밀번호를 입력해주세요.';
           return;
         }
 
-        const formData = new FormData();
-        formData.append('file', file);
-
         try {
-          const res = await fetch('/upload', {
+          const res = await fetch('/auth/login', {
             method: 'POST',
-            body: formData,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, password }),
           });
-
-          if (!res.ok) throw new Error('업로드 실패');
 
           const data = await res.json();
-          const isImage = file.type.startsWith('image/');
 
-          // 파일 업로드 완료 후 메시지로 전송
-          socket.emit('send_message', {
-            sender: myName,
-            message: '',
-            fileUrl: data.url,
-            fileName: data.originalName,
-            fileType: isImage ? 'image' : 'file',
-          });
+          if (!res.ok) {
+            errorEl.textContent = data.error;
+            return;
+          }
 
-          input.value = ''; // 파일 입력 초기화
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('name', data.name);
+          myName = data.name;
+
+          connectSocket(data.token);
         } catch (err) {
-          alert('파일 업로드에 실패했어요!');
+          errorEl.textContent = '서버 오류가 발생했어요.';
           console.error(err);
         }
       }
 
+      // Socket.io 연결 — JWT 포함
+      function connectSocket(token) {
+        socket = io({
+          auth: { token }, // 서버의 io.use()에서 검증해요
+        });
+
+        socket.on('connect_error', (err) => {
+          console.error('연결 실패:', err.message);
+          localStorage.removeItem('token');
+          localStorage.removeItem('name');
+          document.getElementById('auth-area').style.display = 'flex';
+          document.getElementById('chat-area').style.display = 'none';
+          document.getElementById('auth-error').textContent = err.message;
+        });
+
+        socket.on('connect', () => {
+          document.getElementById('auth-area').style.display = 'none';
+          document.getElementById('chat-area').style.display = 'flex';
+        });
+
+        // 방 목록 업데이트
+        socket.on('update_rooms', (rooms) => {
+          const list = document.getElementById('room-list');
+          list.innerHTML = rooms
+            .map(
+              (room) => `
+          <li class="${room.name === currentRoom ? 'active' : ''}"
+              onclick="joinRoom('${room.name}')">
+            <span># ${room.name}</span>
+            ${
+              room.owner === myName
+                ? `<button class="delete-btn" onclick="deleteRoom(event, '${room.name}')">✕</button>`
+                : ''
+            }
+          </li>
+        `,
+            )
+            .join('');
+        });
+
+        socket.on('update_users', (users) => {
+          const list = document.getElementById('user-list');
+          const count = document.getElementById('user-count');
+          count.textContent = users.length;
+          list.innerHTML = users
+            .map(
+              (name) => `
+          <li class="${name === myName ? 'me' : ''}">
+            <span class="status-dot"></span>
+            ${name} ${name === myName ? '(나)' : ''}
+          </li>
+        `,
+            )
+            .join('');
+        });
+
+        socket.on('notice', (message) => {
+          const box = document.getElementById('messages');
+          box.innerHTML += `<div class="notice">${message}</div>`;
+          box.scrollTop = box.scrollHeight;
+        });
+
+        socket.on('receive_message', (data) => {
+          const box = document.getElementById('messages');
+          box.innerHTML += renderMessage(data, data.sender === myName);
+          box.scrollTop = box.scrollHeight;
+        });
+
+        socket.on('room_deleted', (roomName) => {
+          if (currentRoom === roomName) {
+            currentRoom = null;
+            document.getElementById('current-room').textContent =
+              '방을 선택하세요';
+            document.getElementById('messages').innerHTML =
+              `<div class="notice">'${roomName}' 방이 삭제되었습니다.</div>`;
+            document.querySelector('.sidebar').style.display = 'none';
+          }
+        });
+
+        socket.on('room_info', (info) => {
+          currentRoomOwner = info.owner;
+        });
+
+        socket.on('join_error', (message) => {
+          alert(message);
+          logout();
+        });
+      }
+
+      // 로그아웃
+      function logout() {
+        localStorage.removeItem('token');
+        localStorage.removeItem('name');
+        if (socket) socket.disconnect();
+        socket = null;
+        myName = '';
+        currentRoom = null;
+
+        document.getElementById('auth-area').style.display = 'flex';
+        document.getElementById('chat-area').style.display = 'none';
+        document.getElementById('auth-name').value = '';
+        document.getElementById('auth-password').value = '';
+        document.getElementById('auth-error').textContent = '';
+      }
+
+      // 페이지 로드 시 토큰 있으면 자동 로그인
+      window.addEventListener('load', () => {
+        const token = localStorage.getItem('token');
+        const name = localStorage.getItem('name');
+        if (token && name) {
+          myName = name;
+          connectSocket(token);
+        }
+      });
+
       function joinRoom(roomName) {
         if (roomName === currentRoom) return;
         currentRoom = roomName;
-
-        // 방 입장 시 사이드바 표시
         document.querySelector('.sidebar').style.display = 'flex';
-
         document.getElementById('current-room').textContent = `# ${roomName}`;
         document.getElementById('messages').innerHTML = '';
         document.getElementById('msg-input').focus();
-
         socket.emit('join_room', roomName);
-
         document.querySelectorAll('#room-list li').forEach((li) => {
           li.classList.toggle(
             'active',
@@ -174,66 +246,57 @@
       }
 
       function deleteRoom(event, roomName) {
-        event.stopPropagation(); // li 클릭 이벤트 막기
+        event.stopPropagation();
         if (!confirm(`'${roomName}' 방을 삭제할까요?`)) return;
         socket.emit('delete_room', roomName);
       }
 
-      // 방 삭제됐을 때 (강제 퇴장)
-      socket.on('room_deleted', (roomName) => {
-        if (currentRoom === roomName) {
-          currentRoom = null;
-          currentRoomOwner = null;
-          document.getElementById('current-room').textContent =
-            '방을 선택하세요';
-          document.getElementById('messages').innerHTML = '';
-          document.getElementById('messages').innerHTML +=
-            `<div class="notice">'${roomName}' 방이 삭제되었습니다.</div>`;
-          // 사이드바 다시 숨기기
-          document.querySelector('.sidebar').style.display = 'none';
+      async function uploadFile(input) {
+        const file = input.files[0];
+        if (!file) return;
+
+        if (file.size > 5 * 1024 * 1024) {
+          alert('파일 크기는 5MB 이하만 가능해요!');
+          input.value = '';
+          return;
         }
-      });
 
-      // 방 정보 (방장 확인용)
-      socket.on('room_info', (info) => {
-        currentRoomOwner = info.owner;
-      });
+        const formData = new FormData();
+        formData.append('file', file);
 
-      socket.on('update_users', (users) => {
-        const list = document.getElementById('user-list');
-        const count = document.getElementById('user-count');
+        try {
+          const token = localStorage.getItem('token');
+          const res = await fetch('/upload', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+            body: formData,
+          });
 
-        count.textContent = users.length;
-        list.innerHTML = users
-          .map(
-            (name) => `
-    <li class="${name === myName ? 'me' : ''}">
-      <span class="status-dot"></span>
-      ${name} ${name === myName ? '(나)' : ''}
-    </li>
-  `,
-          )
-          .join('');
-      });
+          if (!res.ok) throw new Error('업로드 실패');
 
-      // 마지막 접속 시간 포맷
-      function getLastSeen(date) {
-        const diff = Math.floor((Date.now() - new Date(date)) / 60000);
-        if (diff < 1) return '방금 전';
-        if (diff < 60) return `${diff}분 전`;
-        if (diff < 1440) return `${Math.floor(diff / 60)}시간 전`;
-        return `${Math.floor(diff / 1440)}일 전`;
+          const data = await res.json();
+          const isImage = file.type.startsWith('image/');
+
+          socket.emit('send_message', {
+            message: '',
+            fileUrl: data.url,
+            fileName: data.originalName,
+            fileType: isImage ? 'image' : 'file',
+          });
+
+          input.value = '';
+        } catch (err) {
+          alert('파일 업로드에 실패했어요!');
+          console.error(err);
+        }
       }
 
-      // 메시지 렌더링 공통 함수
       function renderMessage(data, isMine) {
-        // 시간 포맷 통일
         const time =
           typeof data.time === 'string' && !data.time.includes('T')
-            ? data.time // 이미 "오후 4:44:02" 형식이면 그대로
-            : new Date(data.time).toLocaleTimeString('ko-KR'); // ISO 형식이면 변환
+            ? data.time
+            : new Date(data.time).toLocaleTimeString('ko-KR');
 
-        // 만료시간 포맷
         function formatExpiry(expiredAt) {
           if (!expiredAt) return '';
           const diff = Math.floor(
@@ -244,70 +307,44 @@
         }
 
         let content = '';
-
         if (data.fileType === 'image') {
           const filename = data.fileUrl.split('/').pop();
           content = `
-      <div class="bubble bubble-file" style="padding: 6px;">
-        <a href="/upload/download/${filename}" target="_blank">
-          <img src="${data.fileUrl}" alt="${data.fileName}"
-               style="max-width:200px; max-height:200px;
-                      border-radius:6px; cursor:pointer; display:block;" />
-        </a>
-        ${formatExpiry(data.expiredAt)}
-      </div>`;
+          <div class="bubble bubble-file" style="padding: 6px;">
+            <a href="/upload/download/${filename}" target="_blank">
+              <img src="${data.fileUrl}" alt="${data.fileName}"
+                   style="max-width:200px; max-height:200px;
+                          border-radius:6px; cursor:pointer; display:block;" />
+            </a>
+            ${formatExpiry(data.expiredAt)}
+          </div>`;
         } else if (data.fileType === 'file') {
           const filename = data.fileUrl.split('/').pop();
           content = `
-      <div class="bubble bubble-file" style="padding: 0;">
-        <a href="/upload/download/${filename}" class="file-link">
-          📎 ${data.fileName}
-        </a>
-        ${formatExpiry(data.expiredAt)}
-      </div>`;
+          <div class="bubble bubble-file" style="padding: 0;">
+            <a href="/upload/download/${filename}" class="file-link">
+              📎 ${data.fileName}
+            </a>
+            ${formatExpiry(data.expiredAt)}
+          </div>`;
         } else {
           content = `<div class="bubble">${data.message}</div>`;
         }
 
         return `
-    <div class="msg ${isMine ? 'mine' : 'other'}">
-      ${!isMine ? `<span class="name">${data.sender}</span>` : ''}
-      ${content}
-      <span class="time">${time}</span>
-    </div>
-  `;
+        <div class="msg ${isMine ? 'mine' : 'other'}">
+          ${!isMine ? `<span class="name">${data.sender}</span>` : ''}
+          ${content}
+          <span class="time">${time}</span>
+        </div>
+      `;
       }
-
-      // 이전 메시지 불러오기
-      socket.on('load_messages', (messages) => {
-        const box = document.getElementById('messages');
-        box.innerHTML = '';
-        messages.forEach((data) => {
-          const isMine = data.sender === myName;
-          box.innerHTML += renderMessage(data, data.sender === myName);
-        });
-        box.scrollTop = box.scrollHeight;
-      });
-
-      socket.on('notice', (message) => {
-        const box = document.getElementById('messages');
-        box.innerHTML += `<div class="notice">${message}</div>`;
-        box.scrollTop = box.scrollHeight;
-      });
-
-      socket.on('receive_message', (data) => {
-        const box = document.getElementById('messages');
-        const isMine = data.sender === myName;
-        box.innerHTML += renderMessage(data, data.sender === myName);
-        box.scrollTop = box.scrollHeight;
-      });
 
       function sendMessage() {
         if (!currentRoom) return alert('채팅방을 먼저 선택해주세요!');
         const message = document.getElementById('msg-input').value;
         if (!message.trim()) return;
-
-        socket.emit('send_message', { sender: myName, message });
+        socket.emit('send_message', { message });
         document.getElementById('msg-input').value = '';
       }
 
@@ -315,9 +352,9 @@
         if (e.key === 'Enter') sendMessage();
       });
       document
-        .getElementById('name-input')
+        .getElementById('auth-password')
         ?.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') joinChat();
+          if (e.key === 'Enter') handleAuth();
         });
       document
         .getElementById('room-input')

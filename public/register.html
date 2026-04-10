@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>회원가입</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div id="auth-area">
+      <div class="join-box">
+        <h2>💬 회원가입</h2>
+        <input id="reg-name" placeholder="닉네임" />
+        <input
+          id="reg-password"
+          type="password"
+          placeholder="비밀번호 (4자 이상)"
+        />
+        <input
+          id="reg-password-confirm"
+          type="password"
+          placeholder="비밀번호 확인"
+        />
+        <button onclick="handleRegister()">회원가입</button>
+        <p id="reg-error" class="auth-error"></p>
+        <div class="auth-links">
+          이미 계정이 있으신가요?
+          <a href="/">로그인</a>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      async function handleRegister() {
+        const name = document.getElementById('reg-name').value.trim();
+        const password = document.getElementById('reg-password').value;
+        const confirm = document.getElementById('reg-password-confirm').value;
+        const errorEl = document.getElementById('reg-error');
+
+        if (!name || !password) {
+          errorEl.textContent = '닉네임과 비밀번호를 입력해주세요.';
+          return;
+        }
+
+        if (password.length < 4) {
+          errorEl.textContent = '비밀번호는 4자 이상이어야 해요.';
+          return;
+        }
+
+        if (password !== confirm) {
+          errorEl.textContent = '비밀번호가 일치하지 않아요.';
+          return;
+        }
+
+        try {
+          const res = await fetch('/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, password }),
+          });
+
+          const data = await res.json();
+
+          if (!res.ok) {
+            errorEl.textContent = data.error;
+            return;
+          }
+
+          // 회원가입 성공 → 로그인 페이지로 이동
+          alert('회원가입 성공! 로그인해주세요 😄');
+          window.location.href = '/';
+        } catch (err) {
+          errorEl.textContent = '서버 오류가 발생했어요.';
+          console.error(err);
+        }
+      }
+
+      // 엔터키 처리
+      ['reg-name', 'reg-password', 'reg-password-confirm'].forEach((id) => {
+        document.getElementById(id).addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') handleRegister();
+        });
+      });
+
+      // 이미 로그인된 상태면 채팅으로 이동
+      window.addEventListener('load', () => {
+        const token = localStorage.getItem('token');
+        if (token) window.location.href = '/';
+      });
+    </script>
+  </body>
+</html>
