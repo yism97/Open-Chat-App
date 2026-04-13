@@ -147,7 +147,7 @@ open-chat-app/
 - Socket.io 실시간 채팅 구현
 - MongoDB 메시지 저장 및 조회
 - 채팅방 기능 (Socket.io Rooms)
-- 로그인 기능 구헌 (jwt / bcrypt)
+- 로그인 기능 구현 (jwt / bcrypt)
 - 파일 / 이미지 전송 (Multer)
 
 ### 🚧 진행 예정
