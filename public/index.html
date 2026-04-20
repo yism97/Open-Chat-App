@@ -38,7 +38,20 @@
         <div class="chat-main">
           <div class="chat-header">
             <h2 id="current-room">방을 선택하세요</h2>
-            <button class="logout-btn" onclick="logout()">로그아웃</button>
+            <div class="header-buttons">
+              <button class="theme-btn" onclick="toggleTheme()" id="theme-btn">
+                🌙
+              </button>
+              <button class="logout-btn" onclick="logout()">로그아웃</button>
+              <button
+                class="leave-btn"
+                onclick="leaveRoom()"
+                id="leave-btn"
+                style="display: none"
+              >
+                🏃 나가기
+              </button>
+            </div>
           </div>
           <div id="messages"></div>
           <div id="input-area">
@@ -212,16 +225,6 @@
         document.getElementById('auth-error').textContent = '';
       }
 
-      // 페이지 로드 시 토큰 있으면 자동 로그인
-      window.addEventListener('load', () => {
-        const token = localStorage.getItem('token');
-        const name = localStorage.getItem('name');
-        if (token && name) {
-          myName = name;
-          connectSocket(token);
-        }
-      });
-
       function joinRoom(roomName) {
         if (roomName === currentRoom) return;
         currentRoom = roomName;
@@ -229,12 +232,27 @@
         document.getElementById('current-room').textContent = `# ${roomName}`;
         document.getElementById('messages').innerHTML = '';
         document.getElementById('msg-input').focus();
+        document.getElementById('leave-btn').style.display = 'inline-block';
         socket.emit('join_room', roomName);
         document.querySelectorAll('#room-list li').forEach((li) => {
           li.classList.toggle(
             'active',
             li.textContent.trim().startsWith(`# ${roomName}`),
           );
+        });
+      }
+
+      function leaveRoom() {
+        if (!currentRoom) return;
+        socket.emit('leave_room', currentRoom);
+        currentRoom = null;
+        document.getElementById('current-room').textContent = '방을 선택하세요';
+        document.getElementById('messages').innerHTML =
+          '<div class="notice">방에서 나왔습니다.</div>';
+        document.getElementById('leave-btn').style.display = 'none';
+        document.querySelector('.sidebar').style.display = 'none';
+        document.querySelectorAll('#room-list li').forEach((li) => {
+          li.classList.remove('active');
         });
       }
 
@@ -347,6 +365,33 @@
         socket.emit('send_message', { message });
         document.getElementById('msg-input').value = '';
       }
+
+      // 다크모드 토글
+      function toggleTheme() {
+        const isDark =
+          document.documentElement.getAttribute('data-theme') === 'dark';
+        const newTheme = isDark ? 'light' : 'dark';
+
+        document.documentElement.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+        document.getElementById('theme-btn').textContent = isDark ? '🌙' : '☀️';
+      }
+
+      // 페이지 로드 시 저장된 테마 적용
+      // 페이지 로드 시 토큰 있으면 자동 로그인
+      window.addEventListener('load', () => {
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        document.getElementById('theme-btn').textContent =
+          savedTheme === 'dark' ? '☀️' : '🌙';
+
+        const token = localStorage.getItem('token');
+        const name = localStorage.getItem('name');
+        if (token && name) {
+          myName = name;
+          connectSocket(token);
+        }
+      });
 
       document.getElementById('msg-input')?.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') sendMessage();

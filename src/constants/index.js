@@ -1,0 +1,8 @@
+module.exports = {
+  FILE_EXPIRE_HOURS: 24,
+  MESSAGE_LIMIT: 50,
+  CLEAN_INTERVAL_MS: 60 * 60 * 1000, // 1시간
+  DEFAULT_ROOM: '일반',
+  SALT_ROUNDS: 10,
+  JWT_EXPIRES_IN: '7d',
+};

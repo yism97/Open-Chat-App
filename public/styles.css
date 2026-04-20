@@ -1,3 +1,73 @@
+/* ── 라이트 / 다크 모드 변수 ── */
+:root {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f0f2f5;
+  --bg-tertiary: #f8f9fa;
+  --bg-input: #ffffff;
+  --bg-room-sidebar: #2f3136;
+  --bg-room-item-hover: rgba(255, 255, 255, 0.08);
+  --bg-room-item-active: rgba(255, 255, 255, 0.15);
+
+  --text-primary: #333333;
+  --text-secondary: #555555;
+  --text-muted: #888888;
+  --text-room: #96989d;
+  --text-room-active: #ffffff;
+
+  --border-color: #eeeeee;
+  --border-input: #dddddd;
+
+  --bubble-other-bg: #ffffff;
+  --bubble-other-border: #eeeeee;
+  --bubble-other-color: #333333;
+  --bubble-mine-bg: #5865f2;
+  --bubble-mine-color: #ffffff;
+
+  --notice-color: #aaaaaa;
+  --status-online: #43b581;
+  --accent: #5865f2;
+  --accent-hover: #4752c4;
+  --accent-light: #f0f1ff;
+  --accent-light-hover: #e0e2ff;
+
+  --shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme='dark'] {
+  --bg-primary: #1e1f22;
+  --bg-secondary: #2b2d31;
+  --bg-tertiary: #313338;
+  --bg-input: #383a40;
+  --bg-room-sidebar: #1e1f22;
+  --bg-room-item-hover: rgba(255, 255, 255, 0.06);
+  --bg-room-item-active: rgba(255, 255, 255, 0.12);
+
+  --text-primary: #dbdee1;
+  --text-secondary: #b5bac1;
+  --text-muted: #80848e;
+  --text-room: #96989d;
+  --text-room-active: #ffffff;
+
+  --border-color: #3f4147;
+  --border-input: #3f4147;
+
+  --bubble-other-bg: #383a40;
+  --bubble-other-border: #3f4147;
+  --bubble-other-color: #dbdee1;
+  --bubble-mine-bg: #5865f2;
+  --bubble-mine-color: #ffffff;
+
+  --notice-color: #80848e;
+  --status-online: #43b581;
+  --accent: #5865f2;
+  --accent-hover: #4752c4;
+  --accent-light: #2c2e47;
+  --accent-light-hover: #35375a;
+
+  --shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+}
+
+/* ── 기본 설정 ── */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -6,54 +76,60 @@
 
 body {
   font-family: sans-serif;
-  background: #f0f2f5;
+  background: var(--bg-secondary);
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: background 0.2s;
+}
+
+h2 {
+  color: var(--text-primary);
 }
 
 /* ── 입장 화면 ── */
-#join-area {
+#auth-area {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 100%;
-  height: 100vh;
 }
 
 .join-box {
-  background: white;
+  background: var(--bg-primary);
   padding: 40px;
   border-radius: 16px;
   display: flex;
   flex-direction: column;
   gap: 12px;
   width: 320px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow);
 }
 
 .join-box h2 {
   text-align: center;
   margin-bottom: 8px;
-  color: #333;
 }
 
 .join-box input {
   padding: 10px 14px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-input);
   border-radius: 8px;
   font-size: 15px;
   outline: none;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  transition: border-color 0.2s;
 }
 
 .join-box input:focus {
-  border-color: #5865f2;
+  border-color: var(--accent);
 }
 
 .join-box button {
   padding: 11px;
-  background: #5865f2;
+  background: var(--accent);
   color: white;
   border: none;
   border-radius: 8px;
@@ -63,16 +139,16 @@ body {
 }
 
 .join-box button:hover {
-  background: #4752c4;
+  background: var(--accent-hover);
 }
 
 /* ── 채팅 레이아웃 ── */
 #chat-area {
-  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
+  width: 100%;
 }
 
 .chat-wrapper {
@@ -80,10 +156,101 @@ body {
   width: 100%;
   max-width: 860px;
   height: 600px;
-  background: white;
+  background: var(--bg-primary);
   border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow);
+}
+
+/* ── 방 목록 사이드바 ── */
+.room-sidebar {
+  width: 160px;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-room-sidebar);
+  border-radius: 16px 0 0 16px;
+}
+
+.room-sidebar-header {
+  padding: 16px;
+  font-size: 13px;
+  font-weight: bold;
+  color: #ffffff;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  height: 56px;
+  display: flex;
+  align-items: center;
+}
+
+#room-list {
+  list-style: none;
+  padding: 8px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+#room-list li {
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 14px;
+  color: var(--text-room);
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+#room-list li:hover {
+  background: var(--bg-room-item-hover);
+  color: var(--text-room-active);
+}
+
+#room-list li.active {
+  background: var(--bg-room-item-active);
+  color: var(--text-room-active);
+  font-weight: bold;
+}
+
+.room-create {
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.room-create input {
+  padding: 7px 10px;
+  border-radius: 6px;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  font-size: 13px;
+  outline: none;
+}
+
+.room-create input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.room-create button {
+  padding: 7px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.room-create button:hover {
+  background: var(--accent-hover);
 }
 
 /* ── 메인 채팅 ── */
@@ -91,13 +258,13 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid #eee;
+  border-right: 1px solid var(--border-color);
 }
 
 .chat-header {
   padding: 16px 20px;
-  border-bottom: 1px solid #eee;
-  background: white;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-primary);
   height: 56px;
   display: flex;
   align-items: center;
@@ -105,7 +272,6 @@ body {
 
 .chat-header h2 {
   font-size: 16px;
-  color: #333;
 }
 
 #messages {
@@ -115,7 +281,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  background: #f8f9fa;
+  background: var(--bg-tertiary);
 }
 
 /* ── 말풍선 ── */
@@ -129,7 +295,6 @@ body {
 .msg.other {
   align-self: flex-start;
 }
-
 .msg.mine {
   align-self: flex-end;
   align-items: flex-end;
@@ -137,7 +302,7 @@ body {
 
 .msg .name {
   font-size: 12px;
-  color: #111111;
+  color: var(--text-muted);
   margin-left: 4px;
   font-weight: 600;
 }
@@ -151,23 +316,19 @@ body {
 }
 
 .msg.other .bubble {
-  background: white;
-  border: 1px solid #eee;
+  background: var(--bubble-other-bg);
+  border: 1px solid var(--bubble-other-border);
   border-top-left-radius: 4px;
-  color: #333;
+  color: var(--bubble-other-color);
 }
 
 .msg.mine .bubble {
-  background: #5865f2;
-  color: white;
+  background: var(--bubble-mine-bg);
+  color: var(--bubble-mine-color);
   border-top-right-radius: 4px;
 }
 
-/* 파일/이미지 업로드 시 말풍선 배경 제거 */
-.msg.mine .bubble.bubble-file {
-  background: transparent;
-}
-
+.msg.mine .bubble.bubble-file,
 .msg.other .bubble.bubble-file {
   background: transparent;
   border: none;
@@ -175,7 +336,7 @@ body {
 
 .msg .time {
   font-size: 11px;
-  color: #bbb;
+  color: var(--text-muted);
   margin: 0 4px;
 }
 
@@ -184,26 +345,29 @@ body {
   display: flex;
   gap: 8px;
   padding: 12px 16px;
-  border-top: 1px solid #eee;
-  background: white;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-primary);
 }
 
 #input-area input {
   flex: 1;
   padding: 10px 14px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-input);
   border-radius: 8px;
   font-size: 14px;
   outline: none;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  transition: border-color 0.2s;
 }
 
 #input-area input:focus {
-  border-color: #5865f2;
+  border-color: var(--accent);
 }
 
 #input-area button {
   padding: 10px 18px;
-  background: #5865f2;
+  background: var(--accent);
   color: white;
   border: none;
   border-radius: 8px;
@@ -213,23 +377,23 @@ body {
 }
 
 #input-area button:hover {
-  background: #4752c4;
+  background: var(--accent-hover);
 }
 
-/* ── 사이드바 ── */
+/* ── 접속자 사이드바 ── */
 .sidebar {
   width: 200px;
   display: none;
   flex-direction: column;
-  background: white;
+  background: var(--bg-primary);
 }
 
 .sidebar-header {
   padding: 16px;
   font-size: 13px;
   font-weight: bold;
-  color: #555;
-  border-bottom: 1px solid #eee;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-color);
   height: 56px;
   display: flex;
   align-items: center;
@@ -250,19 +414,19 @@ body {
   padding: 8px 10px;
   border-radius: 8px;
   font-size: 14px;
-  color: #444;
+  color: var(--text-primary);
 }
 
 #user-list li.me {
-  background: #f0f1ff;
-  color: #5865f2;
+  background: var(--accent-light);
+  color: var(--accent);
   font-weight: bold;
 }
 
 .status-dot {
   width: 8px;
   height: 8px;
-  background: #43b581;
+  background: var(--status-online);
   border-radius: 50%;
   flex-shrink: 0;
 }
@@ -271,143 +435,19 @@ body {
 .notice {
   text-align: center;
   font-size: 12px;
-  color: #aaa;
+  color: var(--notice-color);
   margin: 6px 0;
 }
 
-/* ── 방 목록 사이드바 ── */
-.room-sidebar {
-  width: 160px;
-  display: flex;
-  flex-direction: column;
-  background: #2f3136;
-  border-radius: 16px 0 0 16px;
-}
-
-.room-sidebar-header {
-  padding: 16px;
-  font-size: 13px;
-  font-weight: bold;
-  color: #fff;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  height: 56px;
-  display: flex;
-  align-items: center;
-}
-
-#room-list {
-  list-style: none;
-  padding: 8px;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-#room-list li {
-  padding: 8px 10px;
-  border-radius: 6px;
-  font-size: 14px;
-  color: #96989d;
-  cursor: pointer;
-  transition:
-    background 0.15s,
-    color 0.15s;
-}
-
-#room-list li:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
-}
-
-#room-list li.active {
-  background: rgba(255, 255, 255, 0.15);
-  color: #fff;
-  font-weight: bold;
-}
-
-.room-create {
-  padding: 10px 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.room-create input {
-  padding: 7px 10px;
-  border-radius: 6px;
-  border: none;
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-  font-size: 13px;
-  outline: none;
-}
-
-.room-create input::placeholder {
-  color: rgba(255, 255, 255, 0.4);
-}
-
-.room-create button {
-  padding: 7px;
-  background: #5865f2;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-size: 13px;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.room-create button:hover {
-  background: #4752c4;
-}
-
-#user-list li {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  border-radius: 8px;
-  font-size: 14px;
-  color: #444;
-}
-
-/* ── 방 삭제 버튼 ── */
-#room-list li {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.delete-btn {
-  background: none;
-  border: none;
-  color: rgba(255, 255, 255, 0.3);
-  cursor: pointer;
-  font-size: 12px;
-  padding: 2px 4px;
-  border-radius: 4px;
-  line-height: 1;
-  transition:
-    color 0.15s,
-    background 0.15s;
-}
-
-.delete-btn:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.15);
-}
-
-/* ── 파일 첨부 버튼 ── */
+/* ── 파일 업로드 ── */
 .file-btn {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 38px;
   height: 38px;
-  background: #f0f1ff;
-  color: #5865f2;
+  background: var(--accent-light);
+  color: var(--accent);
   border-radius: 8px;
   font-size: 22px;
   cursor: pointer;
@@ -418,16 +458,14 @@ body {
 }
 
 .file-btn:hover {
-  background: #e0e2ff;
+  background: var(--accent-light-hover);
 }
 
-/* ── 파일 다운로드 링크 ── */
 .file-link {
   display: inline-block;
   padding: 8px 14px;
-  background: white;
-  color: #5865f2;
-  border: 1px solid #ddd;
+  background: var(--accent-light);
+  color: var(--accent);
   border-radius: 8px;
   font-size: 13px;
   text-decoration: none;
@@ -435,12 +473,13 @@ body {
 }
 
 .file-link:hover {
-  background: #f5f5f5;
+  background: var(--accent-light-hover);
 }
 
+/* ── 만료 ── */
 .expiry {
   font-size: 11px;
-  color: #aaa;
+  color: var(--text-muted);
   margin-top: 4px;
   display: block;
 }
@@ -452,42 +491,33 @@ body {
   display: block;
 }
 
-/* ── 에러 메시지 ── */
-.auth-error {
+/* ── 방 나가기 버튼 ── */
+.leave-btn {
+  padding: 6px 12px;
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
   font-size: 13px;
-  color: #e24b4a;
-  text-align: center;
-  min-height: 18px;
-  margin: 0;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-right: 8px;
 }
 
-/* ── 로그인/회원가입 링크 ── */
-.auth-links {
-  text-align: center;
-  font-size: 13px;
-  color: #888;
-  margin-top: 4px;
-}
-
-.auth-links a {
-  color: #5865f2;
-  text-decoration: none;
-  font-weight: 500;
-  margin-left: 4px;
-}
-
-.auth-links a:hover {
-  text-decoration: underline;
+.leave-btn:hover {
+  background: #fef3e2;
+  border-color: #f9a825;
+  color: #f9a825;
 }
 
 /* ── 로그아웃 버튼 ── */
 .logout-btn {
   padding: 6px 12px;
   background: none;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   font-size: 13px;
-  color: #888;
+  color: var(--text-muted);
   cursor: pointer;
   transition: all 0.2s;
   margin-left: auto;
@@ -499,12 +529,66 @@ body {
   color: #e24b4a;
 }
 
-/* ── chat-header flex 정렬 ── */
-.chat-header {
-  display: flex;
-  align-items: center;
-  padding: 16px 20px;
-  border-bottom: 1px solid #eee;
-  background: white;
-  height: 56px;
+/* ── 다크모드 토글 버튼 ── */
+.theme-btn {
+  padding: 6px 10px;
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-left: 8px;
+  color: var(--text-muted);
+}
+
+.theme-btn:hover {
+  background: var(--bg-tertiary);
+}
+
+/* ── 로그인/회원가입 링크 ── */
+.auth-links {
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.auth-links a {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+  margin-left: 4px;
+}
+
+.auth-links a:hover {
+  text-decoration: underline;
+}
+
+/* ── 에러 메시지 ── */
+.auth-error {
+  font-size: 13px;
+  color: #e24b4a;
+  text-align: center;
+  min-height: 18px;
+  margin: 0;
+}
+
+/* ── 삭제 버튼 ── */
+.delete-btn {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition:
+    color 0.15s,
+    background 0.15s;
+}
+
+.delete-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.15);
 }

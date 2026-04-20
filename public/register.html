@@ -30,6 +30,11 @@
     </div>
 
     <script>
+      // 저장된 테마 적용
+      window.addEventListener('load', () => {
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+      });
       async function handleRegister() {
         const name = document.getElementById('reg-name').value.trim();
         const password = document.getElementById('reg-password').value;
